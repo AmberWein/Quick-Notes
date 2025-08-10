@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import "./QuickNotes.css";
 
 function QuickNotes() {
@@ -7,6 +7,34 @@ function QuickNotes() {
   const [noteContent, setNoteContent] = useState("");
   const textareaRef = useRef(null);
   const [selectedNote, setSelectedNote] = useState(null);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+  // load notes from localStorage on component mount
+  useEffect(() => {
+    const stored = localStorage.getItem("quick-notes");
+    if (stored) {
+      try {
+        const parsedNotes = JSON.parse(stored);
+        // convert date strings back to Date objects
+        const notesWithDates = parsedNotes.map(note => ({
+          ...note,
+          createdAt: new Date(note.createdAt),
+          updatedAt: note.updatedAt ? new Date(note.updatedAt) : null
+        }));
+        setNotes(notesWithDates);
+      } catch (error) {
+        console.error("error loading notes from localStorage:", error);
+        setNotes([]);
+      }
+    }
+    setIsInitialLoad(false); // initial load is complete
+  }, []);
+
+  useEffect(() => {
+    if (!isInitialLoad) {
+      localStorage.setItem("quick-notes", JSON.stringify(notes));
+    }
+  }, [notes, isInitialLoad]);
 
   const formatDate = (date) => {
     const months = [
@@ -34,6 +62,15 @@ function QuickNotes() {
     return `${month} ${day}${getOrdinalSuffix(day)} ${displayHours}:${minutes} ${ampm}`;
   };
 
+  const handleContentChange = (e) => {
+    setNoteContent(e.target.value);
+
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = textareaRef.current.scrollHeight + "px";
+    }
+  };
+
   const addNote = () => {
     if (noteContent.trim() === "") return;
 
@@ -45,30 +82,23 @@ function QuickNotes() {
       updatedAt: null,
     };
 
-    setNotes([...notes, newNote]);
+    setNotes([...notes, newNote]); // trigger the useEffect to save
     setNoteContent("");
     setNoteTitle("");
   };
 
   const deleteNote = (noteId) => {
-    const confirmDelete = window.confirm("Are you sure you want to delete your note?");
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete your note?"
+    );
     if (confirmDelete) {
       setNotes(notes.filter((note) => note.id !== noteId));
       if (selectedNote?.id === noteId) setSelectedNote(null);
     }
   };
 
-  const handleContentChange = (e) => {
-    setNoteContent(e.target.value);
-
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height = textareaRef.current.scrollHeight + "px";
-    }
-  };
-
   const openNote = (note) => {
-    setSelectedNote({...note});
+    setSelectedNote({ ...note });
   };
 
   const closeModal = () => {
@@ -76,7 +106,7 @@ function QuickNotes() {
   };
 
   const handleModalChange = (field, value) => {
-    setSelectedNote(prev => ({
+    setSelectedNote((prev) => ({
       ...prev,
       [field]: value,
     }));
@@ -85,11 +115,13 @@ function QuickNotes() {
   const saveNoteChanges = () => {
     if (!selectedNote.content.trim()) return;
 
-    setNotes(notes.map(note => 
-      note.id === selectedNote.id 
-      ? {...selectedNote, updatedAt: new Date()} 
-      : note
-    ));
+    setNotes(
+      notes.map((note) =>
+        note.id === selectedNote.id
+          ? { ...selectedNote, updatedAt: new Date() }
+          : note
+      )
+    );
     setSelectedNote(null);
   };
 
@@ -111,7 +143,7 @@ function QuickNotes() {
           onChange={handleContentChange}
           placeholder="Write your note here..."
           rows={1}
-          style={{overflow: "hidden"}}
+          style={{ overflow: "hidden" }}
         />
         <button onClick={addNote}>Add</button>
       </div>
@@ -150,7 +182,7 @@ function QuickNotes() {
 
       {selectedNote && (
         <div className="modal-backdrop" onClick={closeModal}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <input
               type="text"
               value={selectedNote.title || ""}
@@ -161,16 +193,23 @@ function QuickNotes() {
               value={selectedNote.content}
               onChange={(e) => handleModalChange("content", e.target.value)}
               rows={5}
-              style={{width: "100%"}}
+              style={{ width: "100%" }}
             />
             <div className="modal-dates">
-              <small>Created: {formatDate(new Date(selectedNote.createdAt))}</small>
+              <small>
+                Created: {formatDate(new Date(selectedNote.createdAt))}
+              </small>
               {selectedNote.updatedAt && (
-                <small> | Updated: {formatDate(new Date(selectedNote.updatedAt))}</small>
+                <small>
+                  {" "}
+                  | Updated: {formatDate(new Date(selectedNote.updatedAt))}
+                </small>
               )}
             </div>
             <button onClick={saveNoteChanges}>Save</button>
-            <button onClick={closeModal} style={{marginLeft:"10px"}}>Cancel</button>
+            <button onClick={closeModal} style={{ marginLeft: "10px" }}>
+              Cancel
+            </button>
           </div>
         </div>
       )}

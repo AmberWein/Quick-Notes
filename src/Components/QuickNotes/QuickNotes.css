@@ -2,6 +2,7 @@
   padding: 20px;
   max-width: 900px;
   margin: auto;
+  margin: auto;
   font-family: Arial, sans-serif;
 }
 
@@ -10,7 +11,8 @@
 }
 
 .add-new-note-container input,
-.add-new-note-container textarea {
+.add-new-note-container textarea,
+.add-new-note-container select {
   width: 100%;
   font-size: 14px;
   border-radius: 4px;
@@ -77,4 +79,35 @@
   font-size: 16px;
   cursor: pointer;
   padding: 2px 6px;
+}
+
+.filter-container {
+  margin-bottom: 20px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  margin-bottom: 10px;
+}
+
+.category-filter {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.category-filter button {
+  padding: 5px 10px;
+  border-radius: 4px;
+  border: none;
+  background-color: #e0e0e0;
+  cursor: pointer;
+}
+
+.category-filter button.active {
+  background-color: #007bff;
+  color: white;
 }

@@ -5,34 +5,37 @@ function QuickNotes() {
   const [notes, setNotes] = useState([]);
   const [noteTitle, setNoteTitle] = useState("");
   const [noteContent, setNoteContent] = useState("");
-  const [noteCategory, setNoteCategory] = useState("Personal"); // NEW: Category state
   const textareaRef = useRef(null);
   const [selectedNote, setSelectedNote] = useState(null);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
+  const [noteCategory, setNoteCategory] = useState("Personal");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("All");
+
   // define categories with colors
   const categories = {
-    "Personal": { color: "#e3f2fd", borderColor: "#1976d2" },
-    "Work": { color: "#f3e5f5", borderColor: "#7b1fa2" },
-    "Study": { color: "#e8f5e8", borderColor: "#388e3c" },
-    "Health": { color: "#fff3e0", borderColor: "#f57c00" },
-    "Finance": { color: "#fce4ec", borderColor: "#c2185b" },
-    "Ideas": { color: "#f1f8e9", borderColor: "#689f38" },
-    "Shopping": { color: "#e0f2f1", borderColor: "#00796b" }
+    Personal: { color: "#e3f2fd", borderColor: "#1976d2" },
+    Work: { color: "#f3e5f5", borderColor: "#7b1fa2" },
+    Study: { color: "#e8f5e8", borderColor: "#388e3c" },
+    Health: { color: "#fff3e0", borderColor: "#f57c00" },
+    Finance: { color: "#fce4ec", borderColor: "#c2185b" },
+    Ideas: { color: "#f1f8e9", borderColor: "#689f38" },
+    Shopping: { color: "#e0f2f1", borderColor: "#00796b" },
   };
 
-  // load notes from localStorage on component mount
+  // load from localStorage
   useEffect(() => {
     const stored = localStorage.getItem("quick-notes");
     if (stored) {
       try {
         const parsedNotes = JSON.parse(stored);
         // convert date strings back to Date objects
-        const notesWithDates = parsedNotes.map(note => ({
+        const notesWithDates = parsedNotes.map((note) => ({
           ...note,
           createdAt: new Date(note.createdAt),
           updatedAt: note.updatedAt ? new Date(note.updatedAt) : null,
-          category: note.category || "Personal" // default category for old notes
+          category: note.category || "Personal", // default category for old notes
         }));
         setNotes(notesWithDates);
       } catch (error) {
@@ -43,6 +46,7 @@ function QuickNotes() {
     setIsInitialLoad(false); // initial load is complete
   }, []);
 
+  // save to localStorage
   useEffect(() => {
     if (!isInitialLoad) {
       localStorage.setItem("quick-notes", JSON.stringify(notes));
@@ -51,8 +55,18 @@ function QuickNotes() {
 
   const formatDate = (date) => {
     const months = [
-      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
     ];
     const month = months[date.getMonth()];
     const day = date.getDate();
@@ -60,10 +74,14 @@ function QuickNotes() {
     const getOrdinalSuffix = (day) => {
       if (day > 3 && day < 21) return "th";
       switch (day % 10) {
-        case 1: return "st";
-        case 2: return "nd";
-        case 3: return "rd";
-        default: return "th";
+        case 1:
+          return "st";
+        case 2:
+          return "nd";
+        case 3:
+          return "rd";
+        default:
+          return "th";
       }
     };
 
@@ -72,7 +90,9 @@ function QuickNotes() {
     const ampm = hours >= 12 ? "PM" : "AM";
     const displayHours = hours % 12 || 12;
 
-    return `${month} ${day}${getOrdinalSuffix(day)} ${displayHours}:${minutes} ${ampm}`;
+    return `${month} ${day}${getOrdinalSuffix(
+      day
+    )} ${displayHours}:${minutes} ${ampm}`;
   };
 
   const handleContentChange = (e) => {
@@ -80,7 +100,8 @@ function QuickNotes() {
 
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height = textareaRef.current.scrollHeight + "px";
+      textareaRef.current.style.height =
+        textareaRef.current.scrollHeight + "px";
     }
   };
 
@@ -140,25 +161,63 @@ function QuickNotes() {
     setSelectedNote(null);
   };
 
+  const filteredNotes = notes.filter((note) => {
+    const matchesSearch =
+      note.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      note.content.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory =
+      categoryFilter === "All" || note.category === categoryFilter;
+    return matchesSearch && matchesCategory;
+  });
+
   return (
     <div className="QuickNotes-container">
       <h1>QuickNotes</h1>
 
+      {/* Search & Category Filter */}
+      <div className="filter-container">
+        <input
+          type="text"
+          placeholder="Search notes..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="search-input"
+        />
+        <div className="category-filter">
+          <button
+            className={categoryFilter === "All" ? "active" : ""}
+            onClick={() => setCategoryFilter("All")}
+          >
+            All
+          </button>
+          {Object.keys(categories).map((cat) => (
+            <button
+              key={cat}
+              className={categoryFilter === cat ? "active" : ""}
+              style={
+                categoryFilter === cat
+                  ? {
+                      backgroundColor: categories[cat].borderColor,
+                      color: "white",
+                    }
+                  : {}
+              }
+              onClick={() => setCategoryFilter(cat)}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Add new note */}
       <div className="add-new-note-container">
         <h3>Add new note</h3>
         <select
           value={noteCategory}
           onChange={(e) => setNoteCategory(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '10px',
-            border: '1px solid #ccc',
-            borderRadius: '4px',
-            marginBottom: '10px',
-            fontSize: '16px'
-          }}
         >
-          {Object.keys(categories).map(category => (
+          {Object.keys(categories).map((category) => (
             <option key={category} value={category}>
               {category}
             </option>
@@ -181,10 +240,11 @@ function QuickNotes() {
         <button onClick={addNote}>Add</button>
       </div>
 
+      {/* Notes list */}
       <div className="notes-container">
-        {notes.map((note) => {
-          const categoryStyle = categories[note.category] || categories["Personal"];
-          
+        {filteredNotes.map((note) => {
+          const categoryStyle =
+            categories[note.category] || categories["Personal"];
           return (
             <div
               key={note.id}
@@ -192,25 +252,15 @@ function QuickNotes() {
               onClick={() => openNote(note)}
               style={{
                 backgroundColor: categoryStyle.color,
-                borderLeft: `4px solid ${categoryStyle.borderColor}`
+                borderLeft: `4px solid ${categoryStyle.borderColor}`,
               }}
             >
-              <div 
+              <div
                 className="category-badge"
-                style={{
-                  display: 'inline-block',
-                  backgroundColor: categoryStyle.borderColor,
-                  color: 'white',
-                  padding: '2px 8px',
-                  borderRadius: '12px',
-                  fontSize: '11px',
-                  fontWeight: 'bold',
-                  marginBottom: '8px'
-                }}
+                style={{ backgroundColor: categoryStyle.borderColor }}
               >
                 {note.category}
               </div>
-
               {note.title && <h4>{note.title}</h4>}
               <div className="note-content">{note.content}</div>
               <div className="note-footer">
@@ -235,25 +285,19 @@ function QuickNotes() {
         })}
       </div>
 
-      {notes.length === 0 && <div>No notes yet, add your first note.</div>}
+      {filteredNotes.length === 0 && (
+        <div>No notes match your search or filter.</div>
+      )}
 
+      {/* Modal */}
       {selectedNote && (
         <div className="modal-backdrop" onClick={closeModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            
             <select
               value={selectedNote.category || "Personal"}
               onChange={(e) => handleModalChange("category", e.target.value)}
-              style={{
-                width: '100%',
-                padding: '10px',
-                border: '1px solid #ccc',
-                borderRadius: '4px',
-                marginBottom: '15px',
-                fontSize: '16px'
-              }}
             >
-              {Object.keys(categories).map(category => (
+              {Object.keys(categories).map((category) => (
                 <option key={category} value={category}>
                   {category}
                 </option>
@@ -270,7 +314,6 @@ function QuickNotes() {
               value={selectedNote.content}
               onChange={(e) => handleModalChange("content", e.target.value)}
               rows={5}
-              style={{ width: "100%" }}
             />
             <div className="modal-dates">
               <small>
@@ -284,7 +327,7 @@ function QuickNotes() {
               )}
             </div>
             <button onClick={saveNoteChanges}>Save</button>
-            <button onClick={closeModal} style={{ marginLeft: "10px" }}>
+            <button onClick={closeModal} className="cancel-btn">
               Cancel
             </button>
           </div>

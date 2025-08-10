@@ -5,9 +5,21 @@ function QuickNotes() {
   const [notes, setNotes] = useState([]);
   const [noteTitle, setNoteTitle] = useState("");
   const [noteContent, setNoteContent] = useState("");
+  const [noteCategory, setNoteCategory] = useState("Personal"); // NEW: Category state
   const textareaRef = useRef(null);
   const [selectedNote, setSelectedNote] = useState(null);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+  // define categories with colors
+  const categories = {
+    "Personal": { color: "#e3f2fd", borderColor: "#1976d2" },
+    "Work": { color: "#f3e5f5", borderColor: "#7b1fa2" },
+    "Study": { color: "#e8f5e8", borderColor: "#388e3c" },
+    "Health": { color: "#fff3e0", borderColor: "#f57c00" },
+    "Finance": { color: "#fce4ec", borderColor: "#c2185b" },
+    "Ideas": { color: "#f1f8e9", borderColor: "#689f38" },
+    "Shopping": { color: "#e0f2f1", borderColor: "#00796b" }
+  };
 
   // load notes from localStorage on component mount
   useEffect(() => {
@@ -19,7 +31,8 @@ function QuickNotes() {
         const notesWithDates = parsedNotes.map(note => ({
           ...note,
           createdAt: new Date(note.createdAt),
-          updatedAt: note.updatedAt ? new Date(note.updatedAt) : null
+          updatedAt: note.updatedAt ? new Date(note.updatedAt) : null,
+          category: note.category || "Personal" // default category for old notes
         }));
         setNotes(notesWithDates);
       } catch (error) {
@@ -78,13 +91,15 @@ function QuickNotes() {
       id: Date.now(),
       title: noteTitle.trim() || null,
       content: noteContent,
+      category: noteCategory,
       createdAt: new Date(),
       updatedAt: null,
     };
 
-    setNotes([...notes, newNote]); // trigger the useEffect to save
+    setNotes([...notes, newNote]);
     setNoteContent("");
     setNoteTitle("");
+    setNoteCategory("Personal");
   };
 
   const deleteNote = (noteId) => {
@@ -131,6 +146,25 @@ function QuickNotes() {
 
       <div className="add-new-note-container">
         <h3>Add new note</h3>
+        <select
+          value={noteCategory}
+          onChange={(e) => setNoteCategory(e.target.value)}
+          style={{
+            width: '100%',
+            padding: '10px',
+            border: '1px solid #ccc',
+            borderRadius: '4px',
+            marginBottom: '10px',
+            fontSize: '16px'
+          }}
+        >
+          {Object.keys(categories).map(category => (
+            <option key={category} value={category}>
+              {category}
+            </option>
+          ))}
+        </select>
+
         <input
           type="text"
           value={noteTitle}
@@ -143,39 +177,62 @@ function QuickNotes() {
           onChange={handleContentChange}
           placeholder="Write your note here..."
           rows={1}
-          style={{ overflow: "hidden" }}
         />
         <button onClick={addNote}>Add</button>
       </div>
 
       <div className="notes-container">
-        {notes.map((note) => (
-          <div
-            key={note.id}
-            className="note-card"
-            onClick={() => openNote(note)}
-          >
-            {note.title && <h4>{note.title}</h4>}
-            <div className="note-content">{note.content}</div>
-            <div className="note-footer">
-              <span>
-                Created: {formatDate(new Date(note.createdAt))}
-                {note.updatedAt && (
-                  <> | Updated: {formatDate(new Date(note.updatedAt))}</>
-                )}
-              </span>
-              <button
-                className="delete-btn"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  deleteNote(note.id);
+        {notes.map((note) => {
+          const categoryStyle = categories[note.category] || categories["Personal"];
+          
+          return (
+            <div
+              key={note.id}
+              className="note-card"
+              onClick={() => openNote(note)}
+              style={{
+                backgroundColor: categoryStyle.color,
+                borderLeft: `4px solid ${categoryStyle.borderColor}`
+              }}
+            >
+              <div 
+                className="category-badge"
+                style={{
+                  display: 'inline-block',
+                  backgroundColor: categoryStyle.borderColor,
+                  color: 'white',
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  fontSize: '11px',
+                  fontWeight: 'bold',
+                  marginBottom: '8px'
                 }}
               >
-                ×
-              </button>
+                {note.category}
+              </div>
+
+              {note.title && <h4>{note.title}</h4>}
+              <div className="note-content">{note.content}</div>
+              <div className="note-footer">
+                <span>
+                  Created: {formatDate(new Date(note.createdAt))}
+                  {note.updatedAt && (
+                    <> | Updated: {formatDate(new Date(note.updatedAt))}</>
+                  )}
+                </span>
+                <button
+                  className="delete-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteNote(note.id);
+                  }}
+                >
+                  ×
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {notes.length === 0 && <div>No notes yet, add your first note.</div>}
@@ -183,6 +240,26 @@ function QuickNotes() {
       {selectedNote && (
         <div className="modal-backdrop" onClick={closeModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            
+            <select
+              value={selectedNote.category || "Personal"}
+              onChange={(e) => handleModalChange("category", e.target.value)}
+              style={{
+                width: '100%',
+                padding: '10px',
+                border: '1px solid #ccc',
+                borderRadius: '4px',
+                marginBottom: '15px',
+                fontSize: '16px'
+              }}
+            >
+              {Object.keys(categories).map(category => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
+
             <input
               type="text"
               value={selectedNote.title || ""}
